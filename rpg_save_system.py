@@ -2,6 +2,7 @@ import os
 import pickle
 import time
 import sys
+import random
 os.system('color')  # 啟動 Windows 顏色支援
 
 # 定義顏色與樣式變數
@@ -79,18 +80,18 @@ def show_destination(destinations):
     loading_steps = ["準備冒險", "確認地圖", "前往傳送點"]
     print("\n" + "─" * 40)
     for i in loading_steps:
-        for j in range(4):
+        for j in range(5):
             sys.stdout.write(f"\r{GREEN}{i}{'.' * j:<4}{RESET}")
             sys.stdout.flush()
-            time.sleep(0.2)
-    time.sleep(0.5)
+            time.sleep(0.1)
+    time.sleep(0.2)
     # 準備完畢提示
     print(f"\r{GREEN}✔ 傳送準備完畢！{RESET}\n")
-    time.sleep(0.5)
+    time.sleep(0.3)
     print(f"{BOLD}{GREEN}╔══════════════════════════════╗{RESET}")
     print(f"{BOLD}{GREEN}║   請選擇欲前往的戰鬥地點     ║{RESET}")
     print(f"{BOLD}{GREEN}╚══════════════════════════════╝{RESET}")
-    time.sleep(1)
+    time.sleep(0.4)
     for index, destination in enumerate(destinations, start=1):
         print(f"{BOLD}{GREEN}地點{index}:{destination}{RESET}")
 
@@ -110,24 +111,148 @@ def select_destination(destinations):
             print("請輸入地點的數字喔!")
 
 
+# 顯示戰鬥選單並取得玩家的戰鬥選擇
 def battle_command(player):
-    command_list = ["攻擊", "大招", "逃跑"]
-    print(f"\n可選行動(請輸入數字):")
+    command_list = ["攻擊", "使用藥水", "大招", "逃跑"]
+    print(f"可選行動(請輸入數字):")
     for i, command in enumerate(command_list, start=1):
         print(f"{i}.{command} ", end="")
-    player_action = input(
-        f"\n{BOLD}{YELLOW}{player['name']}{RESET}要怎麼做?")
+    while True:
+        try:
+            player_action = int(input(
+                f"\n{BOLD}{YELLOW}{player['name']}{RESET}要怎麼做?"))
+            if 0 < player_action <= 4:
+                return player_action
+            else:
+                print(f"{BOLD}{RED}請輸入範圍內的數字喔{RESET}")
+        except ValueError:
+            print(f"{BOLD}{RED}請輸入整數數字喔!{RESET}")
 
 
+# 戰鬥流程控制
 def battle(player, monsters, destinations):
     monster_select = select_destination(destinations) - 1
     enemy = monsters[monster_select]
     print(f"{BOLD}{RED}{enemy['display_name']}{RESET}出現了!")
-    battle_command(player)
+
+    # 怪物數值
+    enemy_hp = enemy['hp']
+    enemy_at = enemy['attack']
+
+    while enemy_hp > 0:
+        # 顯示敵人狀態
+        print("\n" + "─" * 40)
+        print(f"敵人:{BOLD}{RED}{enemy['display_name']}{RESET} 血量:{enemy_hp}")
+        print("─" * 40)
+        time.sleep(0.2)
+
+        player_action = battle_command(player)
+
+        # 基本攻擊
+        if player_action == 1:
+            print()
+            print(
+                f"{BOLD}{YELLOW}{player['name']}{RESET}對{BOLD}{RED}{enemy['display_name']}{RESET}發起了攻擊!")
+            damage = attack(player, enemy)
+            time.sleep(0.4)
+            print(
+                f"對{BOLD}{RED}{enemy['display_name']}{RESET}造成了{damage}點的傷害!")
+            enemy_hp = enemy_hp - damage
+            print()
+            time.sleep(0.6)
+
+        # 使用藥水
+        elif player_action == 2:
+            print(f"{BOLD}{YELLOW}{player['name']}{RESET}準備使用藥水!")
+            continue
+
+        # 使用大招流程
+        elif player_action == 3:
+            print(f"{BOLD}{YELLOW}{player['name']}{RESET}開始詠唱,準備使用終結技!")
+            continue
+
+        # 逃跑流程
+        elif player_action == 4:
+            print(f"{BOLD}{YELLOW}{player['name']}{RESET}選擇逃跑!")
+            time.sleep(0.2)
+            player_flee = player_run(player, enemy)
+            print("逃跑中")
+            time.sleep(1.5)
+            if player_flee:
+                print(
+                    f"{BOLD}{YELLOW}{player['name']}{RESET}成功逃離{BOLD}{RED}{enemy['display_name']}{RESET}了!")
+                return
+            else:
+                print("逃跑失敗")
+                continue
+    print(f"怪物被打倒,戰鬥結束!")
+    print(f"獲得經驗值:{enemy['exp']}點")
+    return enemy['exp']
+
+
+# 攻擊傷害計算
+def attack(player, enemy):
+    crit_rate = 0.06 + player['level'] * 0.01
+    base_damage = player['attack'] - enemy['defense']
+
+    if base_damage < 0:
+        print(f"{BOLD}{YELLOW}{player['name']}{RESET}打出了MISS")
+        time.sleep(0.1)
+        options = [f"{BOLD}{RED}{enemy['display_name']}{RESET}失望地搖頭：『戰鬥力只有 5 的渣滓。』", f"{BOLD}{RED}{enemy['display_name']}{RESET}懷疑你是不是在幫他做免費的全身按摩", f"{BOLD}{RED}{enemy['display_name']}{RESET}歪著頭看著你，眼神裡充滿了對弱勢族群的關懷",
+                   f"{BOLD}{RED}{enemy['display_name']}{RESET}甚至想幫你的課金進度點根菸", f"{BOLD}{RED}{enemy['display_name']}{RESET}表示：『左邊肩膀再大力一點，對對對，就是那裡。』", f"{BOLD}{RED}{enemy['display_name']}{RESET}的系统提示響起：『檢測到刮痧傷害，已自動判定為無效防衛。』", f"{BOLD}{RED}{enemy['display_name']}{RESET}受到 0 點傷害，並順手塞給了你一本《基礎重訓指南》。", f"{BOLD}{RED}{enemy['display_name']}{RESET}毫髮無傷，並遞給你一條士力架：『我阿嬤踢的都比你好』", f"{BOLD}{RED}{enemy['display_name']}{RESET}覺得力道剛剛好，並打賞了你 5 塊小費。"]
+        hurt_text = random.choice(options)
+        print(hurt_text)
+        if hurt_text == f"{BOLD}{RED}{enemy['display_name']}{RESET}覺得力道剛剛好，並打賞了你 5 塊小費。":
+            print("你拿到了5元怪物幣")
+        time.sleep(1)
+        return 0
+
+    # 爆擊判斷,一樣先運氣影響
+    if random.random() > 0.9:
+        print(
+            f"{BOLD}{YELLOW}{player['name']}{RESET}{BOLD}{CYAN}打出了爆擊!{RESET}")
+        damage = int(base_damage * 1.6)
+        time.sleep(0.8)
+        return damage
+    elif random.random() < 0.09:
+        damage = base_damage
+        return damage
+    else:
+        if random.random() < crit_rate:
+            print(
+                f"{BOLD}{YELLOW}{player['name']}{RESET}{BOLD}{CYAN}打出了爆擊!{RESET}")
+            damage = int(base_damage * 1.6)
+            time.sleep(0.8)
+            return damage
+        else:
+            damage = base_damage
+            return damage
 
 
 def use_potion(player):
     pass
+
+
+# 逃跑控制,回傳是否逃跑成功
+def player_run(player, enemy):
+    player_hp = int(player['hp'])
+    enemy_hp = int(enemy['hp'])
+    if player_hp - enemy_hp >= 0:
+        print('逃跑成功!')
+        return True
+    else:
+        success_rate = player_hp / enemy_hp
+
+        # 模擬運氣影響逃跑成功失敗 10~15%左右 運氣判斷完才會依據兩邊的狀態去判斷
+        if random.random() > 0.85:
+            return True
+        elif random.random() < 0.1:
+            return False
+        else:
+            if random.random() < success_rate:
+                return True
+            else:
+                return False
 
 
 def save_pickle(player, monsters, item_data):
@@ -186,7 +311,8 @@ def main():
             "hp": 30,
             "attack": 5,
             "exp": 20,
-            "gold": 10
+            "gold": 10,
+            "defense": 1
         },
         {
             "name": "goblin",
@@ -194,7 +320,8 @@ def main():
             "hp": 50,
             "attack": 8,
             "exp": 35,
-            "gold": 18
+            "gold": 18,
+            "defense": 4
         },
         {
             "name": "wolf",
@@ -202,7 +329,8 @@ def main():
             "hp": 680,
             "attack": 44,
             "exp": 1000,
-            "gold": 500
+            "gold": 500,
+            "defense": 16
         },
         {
             "name": "orange_mushroom",
@@ -210,7 +338,8 @@ def main():
             "hp": 130,
             "attack": 12,
             "exp": 127,
-            "gold": 188
+            "gold": 188,
+            "defense": 8
         },
         {
             "name": "green_slime",
@@ -218,7 +347,8 @@ def main():
             "hp": 70,
             "attack": 12,
             "exp": 80,
-            "gold": 77
+            "gold": 77,
+            "defense": 6
         },
         {
             "name": "balrog",
@@ -226,7 +356,8 @@ def main():
             "hp": 9999,
             "attack": 999,
             "exp": 99999,
-            "gold": 100000
+            "gold": 100000,
+            "defense": 100
         }
     ]
 
@@ -264,7 +395,10 @@ def main():
             show_status(player)
 
         elif user_choice == 2:
-            battle(player, monsters, destinations)
+            stage_clear_data = battle(player, monsters, destinations)
+            if stage_clear_data == None:
+                continue
+            player['exp'] += stage_clear_data
 
         elif user_choice == 3:
             use_potion(player)
@@ -292,4 +426,5 @@ def main():
             break
 
 
-main()
+if __name__ == '__main__':
+    main()
