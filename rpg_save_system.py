@@ -58,9 +58,9 @@ def show_status(player):
     print(f"金幣:{player['gold']}{RESET}")
     print()
     print("=== 道具 ===")
-    items = player['items']
-    for item in items:
-        print(item)
+    player_items = player['items']
+    for item, count in player_items.items():
+        print(f"道具: {item} x {count}")
     print()
     print("=== 任務 ===")
     quests = player['quests']
@@ -173,7 +173,7 @@ def battle(player, monsters, destinations):
 
         # 逃跑流程
         elif player_action == 4:
-            print(f"{BOLD}{YELLOW}{player['name']}{RESET}選擇逃跑!")
+            print(f"\n{BOLD}{YELLOW}{player['name']}{RESET}選擇逃跑!")
             time.sleep(0.2)
             player_flee = player_run(player, enemy)
             print("逃跑中")
@@ -186,13 +186,26 @@ def battle(player, monsters, destinations):
                 print("逃跑失敗")
                 continue
     print(f"怪物被打倒,戰鬥結束!")
-    print(f"獲得經驗值:{enemy['exp']}點")
-    return enemy['exp']
+    print()
+    print("=" * 8 + "戰力品" + "=" * 8)
+    print(
+        f"{BOLD}{YELLOW}{player['name']}{RESET}{BOLD}{CYAN}獲得經驗值:{enemy['exp']}點{RESET}")
+    print(
+        f"{BOLD}{YELLOW}{player['name']}{RESET}{BOLD}{CYAN}獲得{enemy['gold']}金幣{RESET}")
+    print("="*22)
+    if enemy['name'] == "balrog":
+        print(
+            f"{BOLD}{YELLOW}{player['name']}{RESET}{BOLD}{CYAN}獲得傳說中的{enemy['drop_items']}!!!{RESET}")
+        battle_rewards2 = {
+            'exp': enemy['exp'], 'gold': enemy['gold'], 'item': enemy['drop_items']}
+        return battle_rewards2
+    battle_rewards = {'exp': enemy['exp'], 'gold': enemy['gold']}
+    return battle_rewards
 
 
 # 攻擊傷害計算
 def attack(player, enemy):
-    crit_rate = 0.06 + player['level'] * 0.01
+    crit_rate = 0.07 + player['level'] * 0.01
     base_damage = player['attack'] - enemy['defense']
 
     if base_damage < 0:
@@ -238,7 +251,6 @@ def player_run(player, enemy):
     player_hp = int(player['hp'])
     enemy_hp = int(enemy['hp'])
     if player_hp - enemy_hp >= 0:
-        print('逃跑成功!')
         return True
     else:
         success_rate = player_hp / enemy_hp
@@ -311,7 +323,7 @@ def main():
             "hp": 30,
             "attack": 5,
             "exp": 20,
-            "gold": 10,
+            "gold": 5,
             "defense": 1
         },
         {
@@ -320,8 +332,8 @@ def main():
             "hp": 50,
             "attack": 8,
             "exp": 35,
-            "gold": 18,
-            "defense": 4
+            "gold": 11,
+            "defense": 5
         },
         {
             "name": "wolf",
@@ -329,8 +341,8 @@ def main():
             "hp": 680,
             "attack": 44,
             "exp": 1000,
-            "gold": 500,
-            "defense": 16
+            "gold": 380,
+            "defense": 27
         },
         {
             "name": "orange_mushroom",
@@ -338,17 +350,17 @@ def main():
             "hp": 130,
             "attack": 12,
             "exp": 127,
-            "gold": 188,
-            "defense": 8
+            "gold": 88,
+            "defense": 18
         },
         {
             "name": "green_slime",
             "display_name": "綠水靈",
-            "hp": 70,
+            "hp": 88,
             "attack": 12,
             "exp": 80,
-            "gold": 77,
-            "defense": 6
+            "gold": 50,
+            "defense": 10
         },
         {
             "name": "balrog",
@@ -356,8 +368,9 @@ def main():
             "hp": 9999,
             "attack": 999,
             "exp": 99999,
-            "gold": 100000,
-            "defense": 100
+            "gold": 10000,
+            "defense": 100,
+            "drop_items": "楓葉之心"
         }
     ]
 
@@ -395,10 +408,16 @@ def main():
             show_status(player)
 
         elif user_choice == 2:
-            stage_clear_data = battle(player, monsters, destinations)
-            if stage_clear_data == None:
+            battle_rewards = battle(player, monsters, destinations)
+            if battle_rewards == None:
                 continue
-            player['exp'] += stage_clear_data
+            player['exp'] += battle_rewards['exp']
+            player['gold'] += battle_rewards['gold']
+            if 'item' in battle_rewards:
+                if battle_rewards['item'] in player['items']:
+                    player['items'][battle_rewards['item']] += 1
+                else:
+                    player['items'][battle_rewards['item']] = 1
 
         elif user_choice == 3:
             use_potion(player)
